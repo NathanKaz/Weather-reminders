@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import type {
   DayForecast,
@@ -19,6 +19,8 @@ export function ReminderForm({ onCreated }: Props) {
   const [cityQuery, setCityQuery] = useState("");
   const [suggestions, setSuggestions] = useState<GeocodeResult[]>([]);
   const [selected, setSelected] = useState<GeocodeResult | null>(null);
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
   const [days, setDays] = useState(5);
   const [kind, setKind] = useState<ConditionKind>("below");
   const [threshold, setThreshold] = useState("0");
@@ -29,6 +31,10 @@ export function ReminderForm({ onCreated }: Props) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [searching, setSearching] = useState(false);
+
+  const boxRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const searchIdRef = useRef(0);
 
   const condition: ReminderCondition | null = useMemo(() => {
     if (kind === "range") {
@@ -52,33 +58,59 @@ export function ReminderForm({ onCreated }: Props) {
           }°C`
     : "—";
 
-  const searchCity = async () => {
-    if (!api) return;
+  // Дебаунс-поиск при вводе.
+  useEffect(() => {
+    const client = api;
     const q = cityQuery.trim();
-    if (q.length < 2) {
-      setError("Введите название города (мин. 2 символа)");
+    if (!client || q.length < 2) {
+      setSuggestions([]);
+      setSearching(false);
       return;
     }
     setSearching(true);
-    setError("");
-    try {
-      const results = await api.searchCity(q);
-      setSuggestions(results);
-      if (results.length === 0) {
-        setError("Город не найден");
-        setSelected(null);
+    const timer = setTimeout(async () => {
+      const id = ++searchIdRef.current;
+      try {
+        const results = await client.searchCity(q);
+        if (id !== searchIdRef.current) return;
+        setSuggestions(results);
+        setOpen(true);
+        setHighlight(results.length > 0 ? 0 : -1);
+      } catch (err) {
+        if (id !== searchIdRef.current) return;
+        setSuggestions([]);
+        setError(`Ошибка поиска: ${(err as Error).message}`);
+      } finally {
+        if (id === searchIdRef.current) setSearching(false);
       }
-    } catch (err) {
-      setError(`Ошибка поиска: ${(err as Error).message}`);
-    } finally {
-      setSearching(false);
-    }
-  };
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [cityQuery]);
+
+  // Закрытие меню по клику вне поля.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  // Подсвечиваемый пункт держим в видимой части списка.
+  useEffect(() => {
+    if (!open || highlight < 0) return;
+    const el = listRef.current?.children[highlight] as HTMLElement | undefined;
+    el?.scrollIntoView({ block: "nearest" });
+  }, [open, highlight]);
 
   const pickCity = async (geo: GeocodeResult) => {
     setSelected(geo);
     setCityQuery(labelOf(geo));
-    setSuggestions([]);
+    setOpen(false);
+    setHighlight(-1);
     setError("");
     if (!api) return;
     try {
@@ -87,6 +119,34 @@ export function ReminderForm({ onCreated }: Props) {
     } catch (err) {
       setPreview([]);
       setError(`Прогноз недоступен: ${(err as Error).message}`);
+    }
+  };
+
+  const onCityKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open || suggestions.length === 0) {
+      if (e.key === "ArrowDown" && suggestions.length > 0) setOpen(true);
+      return;
+    }
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlight((h) => (h + 1) % suggestions.length);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlight((h) => (h <= 0 ? suggestions.length - 1 : h - 1));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (highlight >= 0 && highlight < suggestions.length) {
+          void pickCity(suggestions[highlight]);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setOpen(false);
+        setHighlight(-1);
+        break;
     }
   };
 
@@ -113,7 +173,7 @@ export function ReminderForm({ onCreated }: Props) {
       return;
     }
     if (!selected) {
-      setError("Выберите город из списка подсказок");
+      setError("Выберите город из выпадающего списка");
       return;
     }
     if (!condition) {
@@ -122,7 +182,7 @@ export function ReminderForm({ onCreated }: Props) {
     }
     setSaving(true);
     try {
-      const created = await api.create({
+      await api.create({
         title: title.trim(),
         city: labelOf(selected),
         latitude: selected.latitude,
@@ -134,15 +194,15 @@ export function ReminderForm({ onCreated }: Props) {
       });
       const list = await api.list();
       onCreated(list);
-      // Сбрасываем форму частично, оставляя город удобным для следующих напоминаний
       setTitle("");
-      void created;
     } catch (err) {
       setError(`Не удалось создать: ${(err as Error).message}`);
     } finally {
       setSaving(false);
     }
   };
+
+  const showDropdown = open && (suggestions.length > 0 || searching);
 
   return (
     <section className="card form">
@@ -156,45 +216,58 @@ export function ReminderForm({ onCreated }: Props) {
           />
         </label>
 
-        <label className="field">
+        <div className="field city-combobox" ref={boxRef}>
           <span>Город</span>
-          <div className="input-row">
-            <input
-              value={cityQuery}
-              onChange={(e) => {
-                setCityQuery(e.target.value);
-                setSelected(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void searchCity();
-              }}
-              placeholder="Москва"
-            />
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => void searchCity()}
-              disabled={searching}
-            >
-              {searching ? "…" : "Найти"}
-            </button>
-          </div>
-        </label>
-
-        {suggestions.length > 0 && (
-          <div className="suggestions">
-            {suggestions.map((s) => (
-              <button
-                type="button"
-                key={`${s.latitude},${s.longitude}`}
-                className="suggestion"
-                onClick={() => void pickCity(s)}
-              >
-                {labelOf(s)}
-              </button>
-            ))}
-          </div>
-        )}
+          <input
+            role="combobox"
+            aria-expanded={showDropdown}
+            aria-controls="city-listbox"
+            aria-autocomplete="list"
+            autoComplete="off"
+            value={cityQuery}
+            onChange={(e) => {
+              setCityQuery(e.target.value);
+              setSelected(null);
+              if (e.target.value.trim().length >= 2) setOpen(true);
+            }}
+            onFocus={() => {
+              if (suggestions.length > 0) setOpen(true);
+            }}
+            onKeyDown={onCityKeyDown}
+            placeholder="Начните вводить: Москва, Berlin…"
+          />
+          {showDropdown && (
+            <ul className="city-dropdown" id="city-listbox" role="listbox" ref={listRef}>
+              {searching && suggestions.length === 0 && (
+                <li className="city-item city-hint" role="presentation">
+                  Поиск…
+                </li>
+              )}
+              {suggestions.map((s, i) => (
+                <li
+                  key={`${s.latitude},${s.longitude}`}
+                  id={`city-option-${i}`}
+                  role="option"
+                  aria-selected={i === highlight}
+                  className={`city-item ${i === highlight ? "highlight" : ""}`}
+                  onMouseEnter={() => setHighlight(i)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    void pickCity(s);
+                  }}
+                >
+                  <span className="city-name">{s.name}</span>
+                  <span className="city-sub">{[s.admin1, s.country].filter(Boolean).join(", ")}</span>
+                </li>
+              ))}
+              {!searching && suggestions.length === 0 && cityQuery.trim().length >= 2 && (
+                <li className="city-item city-hint" role="presentation">
+                  Ничего не найдено
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
 
         <label className="field">
           <span>Горизонт (дней, 1–16)</span>

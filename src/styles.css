@@ -117,26 +117,55 @@ select:focus {
   flex: 1;
 }
 
-.suggestions {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.city-combobox {
+  position: relative;
 }
 
-.suggestion {
+.city-dropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
   background: var(--bg-input);
-  color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 13px;
-  cursor: pointer;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  max-height: 260px;
+  overflow-y: auto;
 }
 
-.suggestion:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+.city-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.city-item.highlight {
+  background: #1d4ed833;
+  outline: 1px solid var(--accent);
+}
+
+.city-name {
+  font-weight: 600;
+}
+
+.city-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.city-hint {
+  color: var(--muted);
+  cursor: default;
 }
 
 .preview {
