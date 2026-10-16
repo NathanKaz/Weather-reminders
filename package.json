@@ -1,0 +1,30 @@
+{
+  "name": "weather-reminders",
+  "version": "1.0.0",
+  "description": "Desktop reminders based on weather forecast (Open-Meteo)",
+  "main": "dist-electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "npm run build:electron && concurrently -k \"vite\" \"npm run electron:dev\"",
+    "electron:dev": "wait-on tcp:5173 && VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "build": "npm run build:electron && vite build",
+    "typecheck": "tsc --noEmit && npm run build:electron -- --noEmit",
+    "test": "npm run build:electron && node --test dist-electron/*.test.js"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "concurrently": "^9.1.0",
+    "electron": "^36.0.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.3.0",
+    "wait-on": "^8.0.0"
+  }
+}
