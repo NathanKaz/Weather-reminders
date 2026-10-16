@@ -1,19 +1,23 @@
 import { api } from "../api";
-import type { Reminder, ReminderCondition } from "../../electron/types";
+import {
+  describeConditionShort,
+  describeOutcome,
+  formatDateTime,
+  metricShort,
+  t,
+} from "../../electron/i18n";
+import type { Language, Reminder } from "../../electron/types";
 
 interface Props {
+  lang: Language;
   reminders: Reminder[];
   onChanged: (reminders: Reminder[]) => void;
   onStatus: (status: string) => void;
 }
 
-export function ReminderList({ reminders, onChanged, onStatus }: Props) {
+export function ReminderList({ lang, reminders, onChanged, onStatus }: Props) {
   if (reminders.length === 0) {
-    return (
-      <section className="empty">
-        Пока нет напоминаний. Нажмите «+ Напоминание», чтобы создать первое.
-      </section>
-    );
+    return <section className="empty">{t(lang, "list.empty")}</section>;
   }
 
   const act = async (fn: () => Promise<Reminder[]>, message: string) => {
@@ -23,35 +27,46 @@ export function ReminderList({ reminders, onChanged, onStatus }: Props) {
       onChanged(list);
       onStatus(message);
     } catch (err) {
-      onStatus(`Ошибка: ${(err as Error).message}`);
+      onStatus(t(lang, "list.error", { message: (err as Error).message }));
     }
   };
 
   return (
     <section className="list">
       {reminders.map((r) => (
-        <article key={r.id} className={`card reminder ${r.triggered ? "triggered" : ""}`}>
+        <article
+          key={r.id}
+          className={`card reminder ${r.triggered ? "triggered" : ""}`}
+        >
           <div className="reminder-main">
             <div className="reminder-title">
               {r.title}
               <span className={`badge ${r.active ? "badge-on" : "badge-off"}`}>
-                {r.active ? "активно" : "выключено"}
+                {r.active ? t(lang, "badge.active") : t(lang, "badge.off")}
               </span>
-              {r.triggered && <span className="badge badge-fired">сработало</span>}
+              {r.triggered && (
+                <span className="badge badge-fired">{t(lang, "badge.fired")}</span>
+              )}
             </div>
             <div className="reminder-meta">
-              📍 {r.city} · {r.days} дн. · {metricLabel(r.metric)} {conditionLabel(r.condition)}
+              📍 {r.city} · {t(lang, "list.days", { n: r.days })} ·{" "}
+              {metricShort(lang, r.metric)}{" "}
+              {describeConditionShort(lang, r.condition)}
             </div>
             {r.triggered && r.triggeredAt && (
               <div className="reminder-result">
-                Сработало {formatDateTime(r.triggeredAt)}
-                {r.lastResult ? ` · ${r.lastResult}` : ""}
+                {t(lang, "list.firedAt", {
+                  time: formatDateTime(lang, r.triggeredAt),
+                })}
+                {r.lastResult ? ` · ${describeOutcome(lang, r.lastResult)}` : ""}
               </div>
             )}
             {!r.triggered && r.lastCheckedAt && (
               <div className="reminder-result muted">
-                Проверено {formatDateTime(r.lastCheckedAt)}
-                {r.lastResult ? ` · ${r.lastResult}` : ""}
+                {t(lang, "list.checkedAt", {
+                  time: formatDateTime(lang, r.lastCheckedAt),
+                })}
+                {r.lastResult ? ` · ${describeOutcome(lang, r.lastResult)}` : ""}
               </div>
             )}
           </div>
@@ -59,52 +74,35 @@ export function ReminderList({ reminders, onChanged, onStatus }: Props) {
             {r.triggered && (
               <button
                 className="btn btn-small btn-secondary"
-                onClick={() => void act(() => api!.rearm(r.id), "Напоминание переведено в активные")}
+                onClick={() =>
+                  void act(
+                    () => api!.rearm(r.id),
+                    t(lang, "list.statusRearmed"),
+                  )
+                }
               >
-                Снова
+                {t(lang, "list.btnRearm")}
               </button>
             )}
             <button
               className="btn btn-small btn-secondary"
-              onClick={() => void act(() => api!.toggle(r.id), "Статус обновлён")}
+              onClick={() =>
+                void act(() => api!.toggle(r.id), t(lang, "list.statusToggled"))
+              }
             >
-              {r.active ? "Выкл" : "Вкл"}
+              {r.active ? t(lang, "list.btnToggleOff") : t(lang, "list.btnToggleOn")}
             </button>
             <button
               className="btn btn-small btn-danger"
-              onClick={() => void act(() => api!.remove(r.id), "Напоминание удалено")}
+              onClick={() =>
+                void act(() => api!.remove(r.id), t(lang, "list.statusDeleted"))
+              }
             >
-              Удалить
+              {t(lang, "list.btnDelete")}
             </button>
           </div>
         </article>
       ))}
     </section>
   );
-}
-
-function metricLabel(metric: Reminder["metric"]): string {
-  return metric === "tmin" ? "мин." : "макс.";
-}
-
-function conditionLabel(condition: ReminderCondition): string {
-  switch (condition.kind) {
-    case "above":
-      return `> ${condition.value}°C`;
-    case "below":
-      return `< ${condition.value}°C`;
-    case "range":
-      return `${condition.min}…${condition.max}°C`;
-  }
-}
-
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("ru-RU", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

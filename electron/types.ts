@@ -5,6 +5,30 @@ export type ReminderCondition =
 
 export type TemperatureMetric = "tmin" | "tmax";
 
+export type Language = "ru" | "en";
+
+export interface Settings {
+  language: Language;
+  closeToTray: boolean;
+  /** Интервал обновления прогноза (TTL кэша), минуты (1..1440). */
+  forecastTtlMinutes: number;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  language: "ru",
+  closeToTray: false,
+  forecastTtlMinutes: 60,
+};
+
+/**
+ * Структурированный результат последней проверки — переводится при рендере,
+ * поэтому смена языка корректно отражается на уже сохранённых записях.
+ */
+export type CheckOutcome =
+  | { kind: "matched"; count: number; exampleDate: string; exampleValue: number; matches: CheckMatch[] }
+  | { kind: "none" }
+  | { kind: "error"; message: string };
+
 export interface Reminder {
   id: string;
   title: string;
@@ -21,7 +45,7 @@ export interface Reminder {
   triggered: boolean;
   triggeredAt?: string;
   lastCheckedAt?: string;
-  lastResult?: string;
+  lastResult?: CheckOutcome;
   createdAt: string;
 }
 

@@ -1,20 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
+import {
+  describeCondition,
+  formatShortDate,
+  t,
+} from "../../electron/i18n";
 import type {
   DayForecast,
   GeocodeResult,
+  Language,
   Reminder,
   ReminderCondition,
   TemperatureMetric,
 } from "../../electron/types";
 
 interface Props {
+  lang: Language;
   onCreated: (reminders: Reminder[]) => void;
 }
 
 type ConditionKind = ReminderCondition["kind"];
 
-export function ReminderForm({ onCreated }: Props) {
+export function ReminderForm({ lang, onCreated }: Props) {
   const [title, setTitle] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [suggestions, setSuggestions] = useState<GeocodeResult[]>([]);
@@ -48,15 +55,7 @@ export function ReminderForm({ onCreated }: Props) {
     return { kind, value };
   }, [kind, threshold, rangeMin, rangeMax]);
 
-  const conditionText = condition
-    ? kind === "below"
-      ? `ниже ${condition.kind === "below" ? condition.value : ""}°C`
-      : kind === "above"
-        ? `выше ${condition.kind === "above" ? condition.value : ""}°C`
-        : `от ${condition.kind === "range" ? condition.min : ""} до ${
-            condition.kind === "range" ? condition.max : ""
-          }°C`
-    : "—";
+  const conditionText = condition ? describeCondition(lang, condition) : "—";
 
   // Дебаунс-поиск при вводе.
   useEffect(() => {
@@ -79,13 +78,13 @@ export function ReminderForm({ onCreated }: Props) {
       } catch (err) {
         if (id !== searchIdRef.current) return;
         setSuggestions([]);
-        setError(`Ошибка поиска: ${(err as Error).message}`);
+        setError(t(lang, "form.errSearch", { message: (err as Error).message }));
       } finally {
         if (id === searchIdRef.current) setSearching(false);
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [cityQuery]);
+  }, [cityQuery, lang]);
 
   // Закрытие меню по клику вне поля.
   useEffect(() => {
@@ -118,7 +117,7 @@ export function ReminderForm({ onCreated }: Props) {
       setPreview(forecast);
     } catch (err) {
       setPreview([]);
-      setError(`Прогноз недоступен: ${(err as Error).message}`);
+      setError(t(lang, "form.errForecast", { message: (err as Error).message }));
     }
   };
 
@@ -169,15 +168,15 @@ export function ReminderForm({ onCreated }: Props) {
     if (!api) return;
     setError("");
     if (!title.trim()) {
-      setError("Укажите название напоминания");
+      setError(t(lang, "form.errTitle"));
       return;
     }
     if (!selected) {
-      setError("Выберите город из выпадающего списка");
+      setError(t(lang, "form.errCity"));
       return;
     }
     if (!condition) {
-      setError("Проверьте значения температуры (для диапазона: от < до)");
+      setError(t(lang, "form.errCondition"));
       return;
     }
     setSaving(true);
@@ -196,7 +195,7 @@ export function ReminderForm({ onCreated }: Props) {
       onCreated(list);
       setTitle("");
     } catch (err) {
-      setError(`Не удалось создать: ${(err as Error).message}`);
+      setError(t(lang, "form.errCreate", { message: (err as Error).message }));
     } finally {
       setSaving(false);
     }
@@ -208,16 +207,16 @@ export function ReminderForm({ onCreated }: Props) {
     <section className="card form">
       <div className="form-grid">
         <label className="field">
-          <span>Название</span>
+          <span>{t(lang, "form.title")}</span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Например: заморозки на даче"
+            placeholder={t(lang, "form.titlePlaceholder")}
           />
         </label>
 
         <div className="field city-combobox" ref={boxRef}>
-          <span>Город</span>
+          <span>{t(lang, "form.city")}</span>
           <input
             role="combobox"
             aria-expanded={showDropdown}
@@ -234,13 +233,13 @@ export function ReminderForm({ onCreated }: Props) {
               if (suggestions.length > 0) setOpen(true);
             }}
             onKeyDown={onCityKeyDown}
-            placeholder="Начните вводить: Москва, Berlin…"
+            placeholder={t(lang, "form.cityPlaceholder")}
           />
           {showDropdown && (
             <ul className="city-dropdown" id="city-listbox" role="listbox" ref={listRef}>
               {searching && suggestions.length === 0 && (
                 <li className="city-item city-hint" role="presentation">
-                  Поиск…
+                  {t(lang, "form.searching")}
                 </li>
               )}
               {suggestions.map((s, i) => (
@@ -257,12 +256,14 @@ export function ReminderForm({ onCreated }: Props) {
                   }}
                 >
                   <span className="city-name">{s.name}</span>
-                  <span className="city-sub">{[s.admin1, s.country].filter(Boolean).join(", ")}</span>
+                  <span className="city-sub">
+                    {[s.admin1, s.country].filter(Boolean).join(", ")}
+                  </span>
                 </li>
               ))}
               {!searching && suggestions.length === 0 && cityQuery.trim().length >= 2 && (
                 <li className="city-item city-hint" role="presentation">
-                  Ничего не найдено
+                  {t(lang, "form.notFound")}
                 </li>
               )}
             </ul>
@@ -270,7 +271,7 @@ export function ReminderForm({ onCreated }: Props) {
         </div>
 
         <label className="field">
-          <span>Горизонт (дней, 1–16)</span>
+          <span>{t(lang, "form.days")}</span>
           <input
             type="number"
             min={1}
@@ -281,21 +282,21 @@ export function ReminderForm({ onCreated }: Props) {
         </label>
 
         <label className="field">
-          <span>Условие</span>
+          <span>{t(lang, "form.condition")}</span>
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value as ConditionKind)}
           >
-            <option value="below">Температура ниже порога</option>
-            <option value="above">Температура выше порога</option>
-            <option value="range">Температура в диапазоне</option>
+            <option value="below">{t(lang, "form.conditionBelow")}</option>
+            <option value="above">{t(lang, "form.conditionAbove")}</option>
+            <option value="range">{t(lang, "form.conditionRange")}</option>
           </select>
         </label>
 
         {kind === "range" ? (
           <>
             <label className="field">
-              <span>От, °C</span>
+              <span>{t(lang, "form.from")}</span>
               <input
                 type="number"
                 value={rangeMin}
@@ -303,7 +304,7 @@ export function ReminderForm({ onCreated }: Props) {
               />
             </label>
             <label className="field">
-              <span>До, °C</span>
+              <span>{t(lang, "form.to")}</span>
               <input
                 type="number"
                 value={rangeMax}
@@ -313,7 +314,7 @@ export function ReminderForm({ onCreated }: Props) {
           </>
         ) : (
           <label className="field">
-            <span>Порог, °C</span>
+            <span>{t(lang, "form.threshold")}</span>
             <input
               type="number"
               value={threshold}
@@ -323,13 +324,13 @@ export function ReminderForm({ onCreated }: Props) {
         )}
 
         <label className="field">
-          <span>Как считать температуру</span>
+          <span>{t(lang, "form.metric")}</span>
           <select
             value={metric}
             onChange={(e) => setMetric(e.target.value as TemperatureMetric)}
           >
-            <option value="tmin">Минимальная (ночью/утром)</option>
-            <option value="tmax">Максимальная (днём)</option>
+            <option value="tmin">{t(lang, "form.metricMin")}</option>
+            <option value="tmax">{t(lang, "form.metricMax")}</option>
           </select>
         </label>
       </div>
@@ -337,12 +338,12 @@ export function ReminderForm({ onCreated }: Props) {
       {preview.length > 0 && (
         <div className="preview">
           <span className="preview-label">
-            Прогноз на {days} дн. ({conditionText}):
+            {t(lang, "form.preview", { days, condition: conditionText })}
           </span>
           <div className="preview-days">
             {preview.map((d) => (
               <span key={d.date} className="preview-day">
-                <b>{formatShort(d.date)}</b>
+                <b>{formatShortDate(lang, d.date)}</b>
                 <span>
                   {fmt(d.tmin)}…{fmt(d.tmax)}°C
                 </span>
@@ -360,7 +361,7 @@ export function ReminderForm({ onCreated }: Props) {
           onClick={() => void submit()}
           disabled={saving}
         >
-          {saving ? "Сохранение…" : "Создать напоминание"}
+          {saving ? t(lang, "form.saving") : t(lang, "form.create")}
         </button>
       </div>
     </section>
@@ -374,10 +375,4 @@ function labelOf(geo: GeocodeResult): string {
 
 function fmt(v: number | null): string {
   return v == null ? "—" : String(Math.round(v * 10) / 10);
-}
-
-function formatShort(iso: string): string {
-  const d = new Date(iso + "T12:00:00");
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }

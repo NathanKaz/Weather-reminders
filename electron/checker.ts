@@ -20,17 +20,6 @@ export function conditionMatches(
   }
 }
 
-export function describeCondition(condition: ReminderCondition): string {
-  switch (condition.kind) {
-    case "above":
-      return `выше ${condition.value}°C`;
-    case "below":
-      return `ниже ${condition.value}°C`;
-    case "range":
-      return `от ${condition.min} до ${condition.max}°C`;
-  }
-}
-
 export function evaluateForecast(
   forecast: DayForecast[],
   condition: ReminderCondition,

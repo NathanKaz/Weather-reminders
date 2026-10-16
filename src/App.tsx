@@ -2,45 +2,80 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import { ReminderForm } from "./components/ReminderForm";
 import { ReminderList } from "./components/ReminderList";
-import type { Reminder } from "../electron/types";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { t } from "../electron/i18n";
+import { DEFAULT_SETTINGS } from "../electron/types";
+import type { Reminder, Settings } from "../electron/types";
 
 export default function App() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [status, setStatus] = useState<string>("Загрузка…");
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [status, setStatus] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const lang = settings.language;
 
   const refresh = useCallback(async () => {
     if (!api) {
-      setStatus("Хост API недоступен — запускайте через Electron (npm start)");
+      setStatus(t(settings.language, "status.apiUnavailable"));
       return;
     }
     const list = await api.list();
     setReminders(list);
-    setStatus(list.length === 0 ? "Напоминаний пока нет" : `${list.length} напоминаний`);
-  }, []);
+    setStatus(
+      list.length === 0
+        ? t(settings.language, "status.noReminders")
+        : t(settings.language, "status.count", { n: list.length }),
+    );
+  }, [settings.language]);
 
   useEffect(() => {
     void refresh();
     if (!api) return;
-    const off = api.onChanged((list) => setReminders(list));
-    return off;
+    const offReminders = api.onChanged((list) => setReminders(list));
+    const offSettings = api.onSettingsChanged((next) => setSettings(next));
+    return () => {
+      offReminders();
+      offSettings();
+    };
   }, [refresh]);
+
+  useEffect(() => {
+    if (!api) return;
+    void api.getSettings().then(setSettings);
+  }, []);
+
+  const updateSettings = async (patch: Partial<Settings>) => {
+    if (!api) return;
+    // Оптимистично применяем (в т.ч. для мгновенной смены языка).
+    setSettings((prev) => ({ ...prev, ...patch }));
+    try {
+      const next = await api.setSettings(patch);
+      setSettings(next);
+      setStatus(t(next.language, "status.settingsSaved"));
+    } catch (err) {
+      setStatus(
+        t(lang, "status.settingsError", { message: (err as Error).message }),
+      );
+    }
+  };
 
   const handleCheckNow = async () => {
     if (!api) return;
     setBusy(true);
-    setStatus("Проверяем прогноз…");
+    setStatus(t(lang, "status.checking"));
     try {
       const result = await api.checkNow();
       setReminders(result.reminders);
       setStatus(
         result.triggered > 0
-          ? `Сработало напоминаний: ${result.triggered}`
-          : "Проверка завершена: срабатываний нет",
+          ? t(lang, "status.triggered", { n: result.triggered })
+          : t(lang, "status.checkDone"),
       );
     } catch (err) {
-      setStatus(`Ошибка проверки: ${(err as Error).message}`);
+      setStatus(t(lang, "status.checkError", { message: (err as Error).message }));
     } finally {
       setBusy(false);
     }
@@ -49,7 +84,7 @@ export default function App() {
   const handleCreated = (list: Reminder[]) => {
     setReminders(list);
     setShowForm(false);
-    setStatus("Напоминание создано");
+    setStatus(t(lang, "status.created"));
   };
 
   return (
@@ -57,9 +92,7 @@ export default function App() {
       <header className="header">
         <div>
           <h1>🌤 Weather Reminders</h1>
-          <p className="subtitle">
-            Напоминания о температуре по прогнозу Open-Meteo
-          </p>
+          <p className="subtitle">{t(lang, "app.subtitle")}</p>
         </div>
         <div className="header-actions">
           <button
@@ -67,19 +100,32 @@ export default function App() {
             onClick={() => void handleCheckNow()}
             disabled={busy}
           >
-            {busy ? "Проверка…" : "Проверить сейчас"}
+            {busy ? t(lang, "btn.checking") : t(lang, "btn.checkNow")}
           </button>
           <button className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? "Закрыть" : "+ Напоминание"}
+            {showForm ? t(lang, "btn.close") : t(lang, "btn.addReminder")}
+          </button>
+          <button
+            className="btn btn-secondary"
+            title={t(lang, "app.settings")}
+            aria-label={t(lang, "app.settings")}
+            onClick={() => setShowSettings((v) => !v)}
+          >
+            ⚙
           </button>
         </div>
       </header>
 
+      {showSettings && api && (
+        <SettingsPanel settings={settings} onChange={(p) => void updateSettings(p)} />
+      )}
+
       <div className="status-bar">{status}</div>
 
-      {showForm && api && <ReminderForm onCreated={handleCreated} />}
+      {showForm && api && <ReminderForm lang={lang} onCreated={handleCreated} />}
 
       <ReminderList
+        lang={lang}
         reminders={reminders}
         onChanged={setReminders}
         onStatus={setStatus}

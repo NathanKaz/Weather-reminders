@@ -1,4 +1,9 @@
-import type { DayForecast, GeocodeResult, WeatherApi } from "./types";
+import type {
+  DayForecast,
+  GeocodeResult,
+  Language,
+  WeatherApi,
+} from "./types";
 
 const OPEN_METEO = "https://api.open-meteo.com/v1";
 const GEOCODE = "https://geocoding-api.open-meteo.com/v1/search";
@@ -23,11 +28,14 @@ interface ForecastResponse {
   };
 }
 
-export async function fetchGeocode(query: string): Promise<GeocodeResult[]> {
+export async function fetchGeocode(
+  query: string,
+  language: Language = "ru",
+): Promise<GeocodeResult[]> {
   const url = new URL(GEOCODE);
   url.searchParams.set("name", query);
   url.searchParams.set("count", "8");
-  url.searchParams.set("language", "ru");
+  url.searchParams.set("language", language);
   url.searchParams.set("format", "json");
 
   const res = await fetch(url);
@@ -45,12 +53,36 @@ export async function fetchGeocode(query: string): Promise<GeocodeResult[]> {
   }));
 }
 
+interface ForecastCacheEntry {
+  fetchedAt: number;
+  data: { timezone: string; days: DayForecast[] };
+}
+
+const forecastCache = new Map<string, ForecastCacheEntry>();
+
+export function clearForecastCache(): void {
+  forecastCache.clear();
+}
+
 export async function fetchForecast(
   latitude: number,
   longitude: number,
   days: number,
+  ttlMinutes = 0,
+  forceRefresh = false,
 ): Promise<{ timezone: string; days: DayForecast[] }> {
   const clamped = Math.min(16, Math.max(1, Math.round(days)));
+  const key = `${latitude.toFixed(3)},${longitude.toFixed(3)},${clamped}`;
+  const cached = forecastCache.get(key);
+  const ttlMs = Math.max(0, ttlMinutes) * 60 * 1000;
+  if (
+    !forceRefresh &&
+    cached &&
+    (ttlMs === 0 || Date.now() - cached.fetchedAt < ttlMs)
+  ) {
+    return cached.data;
+  }
+
   const url = new URL(OPEN_METEO + "/forecast");
   url.searchParams.set("latitude", String(latitude));
   url.searchParams.set("longitude", String(longitude));
@@ -72,7 +104,9 @@ export async function fetchForecast(
     tmin: daily.temperature_2m_min?.[i] ?? null,
     tmax: daily.temperature_2m_max?.[i] ?? null,
   }));
-  return { timezone: data.timezone || "auto", days: daysOut };
+  const result = { timezone: data.timezone || "auto", days: daysOut };
+  forecastCache.set(key, { fetchedAt: Date.now(), data: result });
+  return result;
 }
 
 export const weatherApi: WeatherApi = {

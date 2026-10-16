@@ -3,6 +3,7 @@ import type {
   DayForecast,
   GeocodeResult,
   Reminder,
+  Settings,
 } from "../electron/types";
 
 export interface Api {
@@ -22,7 +23,10 @@ export interface Api {
     longitude: number,
     days: number,
   ): Promise<DayForecast[]>;
+  getSettings(): Promise<Settings>;
+  setSettings(patch: Partial<Settings>): Promise<Settings>;
   onChanged(callback: (reminders: Reminder[]) => void): () => void;
+  onSettingsChanged(callback: (settings: Settings) => void): () => void;
 }
 
 declare global {

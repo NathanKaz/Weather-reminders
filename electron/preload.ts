@@ -4,6 +4,7 @@ import type {
   DayForecast,
   GeocodeResult,
   Reminder,
+  Settings,
 } from "./types";
 
 const api = {
@@ -39,11 +40,23 @@ const api = {
   ): Promise<DayForecast[]> {
     return ipcRenderer.invoke("forecast:preview", { latitude, longitude, days });
   },
+  getSettings(): Promise<Settings> {
+    return ipcRenderer.invoke("settings:get");
+  },
+  setSettings(patch: Partial<Settings>): Promise<Settings> {
+    return ipcRenderer.invoke("settings:set", patch);
+  },
   onChanged(callback: (reminders: Reminder[]) => void): () => void {
     const listener = (_e: Electron.IpcRendererEvent, list: Reminder[]) =>
       callback(list);
     ipcRenderer.on("reminders:changed", listener);
     return () => ipcRenderer.removeListener("reminders:changed", listener);
+  },
+  onSettingsChanged(callback: (settings: Settings) => void): () => void {
+    const listener = (_e: Electron.IpcRendererEvent, next: Settings) =>
+      callback(next);
+    ipcRenderer.on("settings:changed", listener);
+    return () => ipcRenderer.removeListener("settings:changed", listener);
   },
 };
 

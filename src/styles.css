@@ -117,6 +117,45 @@ select:focus {
   flex: 1;
 }
 
+.settings {
+  margin-bottom: 20px;
+}
+
+.settings-title {
+  margin: 0 0 14px;
+  font-size: 16px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-strong);
+}
+
+.checkbox span {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.settings-hint {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .city-combobox {
   position: relative;
 }
