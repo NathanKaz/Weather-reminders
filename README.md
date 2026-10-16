@@ -1,62 +1,60 @@
 # Weather Reminders
 
-Русский · [English](README.en.md)
+A desktop app (Electron + React) that reminds you about temperature based on the [Open-Meteo](https://open-meteo.com) weather forecast — no API keys required.
 
-Десктопное приложение (Electron + React), которое напоминает о температуре по прогнозу погоды [Open-Meteo](https://open-meteo.com) — без API-ключей.
+[Русская версия](README.ru.md) · English
 
-## Возможности
+## Features
 
-- Напоминание срабатывает, если в ближайшие 1–16 дней по прогнозу температура:
-  - **ниже** порога (минимальная/максимальная),
-  - **выше** порога,
-  - либо попадает в **диапазон**.
-- Поиск города через геокодер Open-Meteo с превью прогноза перед созданием.
-- Десктоп-уведомление при срабатывании (один раз; кнопка «Снова» перевзводит).
-- Ручная проверка кнопкой «Проверить сейчас» (всегда тянет свежий прогноз).
-- Настройки (⚙ в шапке):
-  - **Язык** интерфейса и уведомлений: русский / English (подсказки городов тоже локализуются);
-  - **Сворачивание в трей** при закрытии окна (выход — через меню трея);
-  - **Интервал проверки напоминаний** (1–1440 мин, по умолчанию 45);
-  - **Интервал обновления прогноза** — TTL кэша прогноза (1–1440 мин, по умолчанию 60).
-- Данные хранятся в `~/.config/Electron/weather-reminders/` (`reminders.json`, `settings.json`; путь зависит от userData Electron).
+- A reminder fires when the forecast temperature over the next 1–16 days is:
+  - **below** a threshold (minimum/maximum),
+  - **above** a threshold,
+  - or falls within a **range**.
+- City search via the Open-Meteo geocoder with a forecast preview before creating a reminder.
+- Desktop notification when a reminder fires (once; the "Rearm" button re-enables it).
+- Manual check with the "Check now" button (always fetches a fresh forecast).
+- Settings (⚙ in the header):
+  - **Language** of the UI and notifications: Russian / English (city suggestions are localized too);
+  - **Minimize to tray** on window close (quit from the tray menu);
+  - **Reminder check interval** (1–1440 min, default 45);
+  - **Forecast refresh interval** — forecast cache TTL (1–1440 min, default 60).
+- Data is stored in `~/.config/Electron/weather-reminders/` (`reminders.json`, `settings.json`; the exact path depends on Electron's userData).
 
-## Запуск
+## Running
 
 ```bash
 npm install
-npm start        # Vite dev-сервер + Electron
+npm start        # Vite dev server + Electron
 ```
 
-Сборка production:
+Production build:
 
 ```bash
 npm run build    # dist/ (UI) + dist-electron/ (main)
-npm test         # юнит-тесты (логика условий, i18n, настройки)
+npm test         # unit tests (condition logic, i18n, settings)
 npm run typecheck
 ```
 
-После `npm run build` Electron можно запустить без dev-сервера: `npx electron .`
+After `npm run build` you can run Electron without the dev server: `npx electron .`
 
-## Сборка пакетов (electron-builder)
+## Packaging (electron-builder)
 
 ```bash
-npm run dist:linux   # release/*.deb и release/*.AppImage
+npm run dist:linux   # release/*.deb and release/*.AppImage
 npm run dist:win     # release/Weather Reminders-Setup-<version>.exe (NSIS)
-npm run dist         # для текущей платформы
+npm run dist         # for the current platform
 ```
 
-Windows-установщик собирается на Linux через Wine (`apt install wine`). Артефакты кладутся в `release/` (не коммитится).
+The Windows installer is built on Linux via Wine (`apt install wine`). Artifacts are placed in `release/` (not committed).
 
-## Структура
+## Structure
 
-- `electron/main.ts` — окно, трей, фоновая проверка, уведомления, IPC
-- `electron/settings.ts` — хранение и валидация настроек
-- `electron/i18n.ts` — словари ru/en и локализованные помощники
-- `electron/weather.ts` — клиент Open-Meteo (forecast + geocoding, кэш прогноза)
-- `electron/checker.ts` — логика срабатывания условий
-- `electron/store.ts` — хранение напоминаний
-- `assets/tray.png` — иконка трея
-- `build/icon.png` — иконка приложения (512×512, для пакетов)
-- `src/` — React-интерфейс
-
-
+- `electron/main.ts` — window, tray, background checks, notifications, IPC
+- `electron/settings.ts` — settings storage and validation
+- `electron/i18n.ts` — ru/en dictionaries and localization helpers
+- `electron/weather.ts` — Open-Meteo client (forecast + geocoding, forecast cache)
+- `electron/checker.ts` — condition matching logic
+- `electron/store.ts` — reminders storage
+- `assets/tray.png` — tray icon
+- `build/icon.png` — application icon (512×512, for packages)
+- `src/` — React UI
