@@ -3,6 +3,7 @@ import type {
   Language,
   ReminderCondition,
   TemperatureMetric,
+  WeatherIconKind,
 } from "./types";
 
 const ru = {
@@ -103,6 +104,50 @@ const ru = {
   "tray.open": "Открыть",
   "tray.checkNow": "Проверить сейчас",
   "tray.quit": "Выход",
+
+  "tab.reminders": "Напоминания",
+  "tab.forecast": "Прогноз",
+
+  "nav.reminders": "Напоминания",
+  "nav.forecast": "Прогноз",
+  "nav.settings": "Настройки",
+
+  "forecast.quick": "Мои города",
+  "forecast.pickCity": "Выберите город, чтобы увидеть прогноз погоды",
+  "forecast.refresh": "Обновить",
+  "forecast.loading": "Загрузка…",
+  "forecast.empty": "Прогноз по дням пуст",
+  "forecast.error": "Не удалось загрузить прогноз: {message}",
+  "forecast.current": "Сейчас",
+  "forecast.feelsLike": "Ощущается",
+  "forecast.wind": "Ветер",
+  "forecast.gusts": "Порывы",
+  "forecast.humidity": "Влажность",
+  "forecast.pressure": "Давление",
+  "forecast.precipitation": "Осадки",
+  "forecast.precipProb": "Вероятность осадков",
+  "forecast.uv": "УФ-индекс",
+  "forecast.sunrise": "Восход",
+  "forecast.sunset": "Закат",
+  "forecast.hourly": "По часам",
+  "forecast.daily": "По дням",
+  "forecast.range24": "24 ч",
+  "forecast.range48": "48 ч",
+  "forecast.updated": "Обновлено в {time}",
+  "forecast.noData": "Нет данных",
+  "forecast.unitWind": "м/с",
+  "forecast.unitHpa": "гПа",
+  "forecast.unitMm": "мм",
+
+  "weather.clear": "Ясно",
+  "weather.partly": "Переменная облачность",
+  "weather.cloudy": "Облачно",
+  "weather.fog": "Туман",
+  "weather.drizzle": "Морось",
+  "weather.rain": "Дождь",
+  "weather.snow": "Снег",
+  "weather.thunder": "Гроза",
+  "weather.unknown": "—",
 } as const;
 
 const en: Record<keyof typeof ru, string> = {
@@ -202,6 +247,50 @@ const en: Record<keyof typeof ru, string> = {
   "tray.open": "Open",
   "tray.checkNow": "Check now",
   "tray.quit": "Quit",
+
+  "tab.reminders": "Reminders",
+  "tab.forecast": "Forecast",
+
+  "nav.reminders": "Reminders",
+  "nav.forecast": "Forecast",
+  "nav.settings": "Settings",
+
+  "forecast.quick": "Your cities",
+  "forecast.pickCity": "Pick a city to see the weather forecast",
+  "forecast.refresh": "Refresh",
+  "forecast.loading": "Loading…",
+  "forecast.empty": "The daily forecast is empty",
+  "forecast.error": "Could not load the forecast: {message}",
+  "forecast.current": "Now",
+  "forecast.feelsLike": "Feels like",
+  "forecast.wind": "Wind",
+  "forecast.gusts": "Gusts",
+  "forecast.humidity": "Humidity",
+  "forecast.pressure": "Pressure",
+  "forecast.precipitation": "Precipitation",
+  "forecast.precipProb": "Precip. chance",
+  "forecast.uv": "UV index",
+  "forecast.sunrise": "Sunrise",
+  "forecast.sunset": "Sunset",
+  "forecast.hourly": "Hourly",
+  "forecast.daily": "Daily",
+  "forecast.range24": "24 h",
+  "forecast.range48": "48 h",
+  "forecast.updated": "Updated at {time}",
+  "forecast.noData": "No data",
+  "forecast.unitWind": "m/s",
+  "forecast.unitHpa": "hPa",
+  "forecast.unitMm": "mm",
+
+  "weather.clear": "Clear",
+  "weather.partly": "Partly cloudy",
+  "weather.cloudy": "Overcast",
+  "weather.fog": "Fog",
+  "weather.drizzle": "Drizzle",
+  "weather.rain": "Rain",
+  "weather.snow": "Snow",
+  "weather.thunder": "Thunderstorm",
+  "weather.unknown": "—",
 };
 
 export type TranslationKey = keyof typeof ru;
@@ -305,4 +394,79 @@ export function formatShortDate(lang: Language, iso: string): string {
     day: "numeric",
     month: "short",
   });
+}
+
+export function formatForecastDay(lang: Language, iso: string): string {
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(locales[lang], {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+export function formatFullDate(lang: Language, iso: string): string {
+  const d = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(locales[lang], {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
+export function formatHour(lang: Language, iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleTimeString(locales[lang], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** WMO weather code → упрощённый тип иконки. */
+export function weatherKind(code: number | null | undefined): WeatherIconKind {
+  if (code == null) return "unknown";
+  if (code === 0 || code === 1) return "clear";
+  if (code === 2) return "partly";
+  if (code === 3) return "cloudy";
+  if (code === 45 || code === 48) return "fog";
+  if (code >= 51 && code <= 57) return "drizzle";
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return "rain";
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "snow";
+  if (code >= 95) return "thunder";
+  return "unknown";
+}
+
+const weatherKeys: Record<WeatherIconKind, TranslationKey> = {
+  clear: "weather.clear",
+  partly: "weather.partly",
+  cloudy: "weather.cloudy",
+  fog: "weather.fog",
+  drizzle: "weather.drizzle",
+  rain: "weather.rain",
+  snow: "weather.snow",
+  thunder: "weather.thunder",
+  unknown: "weather.unknown",
+};
+
+export function describeWeather(
+  lang: Language,
+  code: number | null | undefined,
+): string {
+  return t(lang, weatherKeys[weatherKind(code)]);
+}
+
+const compass = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"];
+const compassEn = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+
+export function windDirectionLabel(
+  lang: Language,
+  degrees: number | null | undefined,
+): string | null {
+  if (degrees == null || !Number.isFinite(degrees)) return null;
+  const idx = Math.round((((degrees % 360) + 360) % 360) / 45) % 8;
+  const source = lang === "ru" ? compass : compassEn;
+  return source[idx];
 }

@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import type {
   CreateReminderInput,
   DayForecast,
+  ForecastBundle,
   GeocodeResult,
   Reminder,
   Settings,
@@ -39,6 +40,19 @@ const api = {
     days: number,
   ): Promise<DayForecast[]> {
     return ipcRenderer.invoke("forecast:preview", { latitude, longitude, days });
+  },
+  forecastDetails(
+    latitude: number,
+    longitude: number,
+    days: number,
+    forceRefresh = false,
+  ): Promise<ForecastBundle> {
+    return ipcRenderer.invoke("forecast:details", {
+      latitude,
+      longitude,
+      days,
+      forceRefresh,
+    });
   },
   getSettings(): Promise<Settings> {
     return ipcRenderer.invoke("settings:get");

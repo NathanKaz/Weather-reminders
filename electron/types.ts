@@ -62,7 +62,62 @@ export interface DayForecast {
   date: string;
   tmin: number | null;
   tmax: number | null;
+  weatherCode?: number | null;
+  precipProbability?: number | null;
+  precipSum?: number | null;
+  windSpeedMax?: number | null;
+  windGustsMax?: number | null;
+  windDirection?: number | null;
+  humidityMean?: number | null;
+  uvIndexMax?: number | null;
+  sunrise?: string | null;
+  sunset?: string | null;
+  apparentMin?: number | null;
+  apparentMax?: number | null;
 }
+
+export interface HourlyForecast {
+  time: string;
+  temperature: number | null;
+  apparent: number | null;
+  precipitationProbability: number | null;
+  precipitation: number | null;
+  weatherCode: number | null;
+  windSpeed: number | null;
+  humidity: number | null;
+  isDay: boolean;
+}
+
+export interface CurrentWeather {
+  time: string;
+  temperature: number | null;
+  apparent: number | null;
+  humidity: number | null;
+  precipitation: number | null;
+  weatherCode: number | null;
+  windSpeed: number | null;
+  windDirection: number | null;
+  pressure: number | null;
+  isDay: boolean;
+}
+
+export interface ForecastBundle {
+  timezone: string;
+  current: CurrentWeather | null;
+  days: DayForecast[];
+  hourly: HourlyForecast[];
+}
+
+export type WeatherIconKind =
+  | "clear"
+  | "partly"
+  | "cloudy"
+  | "fog"
+  | "drizzle"
+  | "rain"
+  | "snow"
+  | "thunder"
+  | "unknown";
 
 export interface CheckMatch {
   date: string;
@@ -92,5 +147,5 @@ export interface WeatherApi {
     latitude: number,
     longitude: number,
     days: number,
-  ): Promise<{ timezone: string; days: DayForecast[] }>;
+  ): Promise<ForecastBundle>;
 }

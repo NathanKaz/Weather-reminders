@@ -6,13 +6,14 @@ import {
   metricShort,
   t,
 } from "../../electron/i18n";
+import type { StatusVariant } from "./StatusBanner";
 import type { Language, Reminder } from "../../electron/types";
 
 interface Props {
   lang: Language;
   reminders: Reminder[];
   onChanged: (reminders: Reminder[]) => void;
-  onStatus: (status: string) => void;
+  onStatus: (status: string, variant?: StatusVariant) => void;
 }
 
 export function ReminderList({ lang, reminders, onChanged, onStatus }: Props) {
@@ -25,9 +26,9 @@ export function ReminderList({ lang, reminders, onChanged, onStatus }: Props) {
     try {
       const list = await fn();
       onChanged(list);
-      onStatus(message);
+      onStatus(message, "success");
     } catch (err) {
-      onStatus(t(lang, "list.error", { message: (err as Error).message }));
+      onStatus(t(lang, "list.error", { message: (err as Error).message }), "error");
     }
   };
 

@@ -11,9 +11,10 @@ A desktop app (Electron + React) that reminds you about temperature based on the
   - **above** a threshold,
   - or falls within a **range**.
 - City search via the Open-Meteo geocoder with a forecast preview before creating a reminder.
+- **Forecast** tab: current conditions, an hourly temperature chart (24/48 h) and a daily forecast with weather icons, precipitation, wind and sunrise/sunset.
 - Desktop notification when a reminder fires (once; the "Rearm" button re-enables it).
 - Manual check with the "Check now" button (always fetches a fresh forecast).
-- Settings (⚙ in the header):
+- Settings (a sidebar section):
   - **Language** of the UI and notifications: Russian / English (city suggestions are localized too);
   - **Minimize to tray** on window close (quit from the tray menu);
   - **Reminder check interval** (1–1440 min, default 45);
@@ -52,9 +53,9 @@ The Windows installer is built on Linux via Wine (`apt install wine`). Artifacts
 - `electron/main.ts` — window, tray, background checks, notifications, IPC
 - `electron/settings.ts` — settings storage and validation
 - `electron/i18n.ts` — ru/en dictionaries and localization helpers
-- `electron/weather.ts` — Open-Meteo client (forecast + geocoding, forecast cache)
+- `electron/weather.ts` — Open-Meteo client (current weather + hourly/daily forecast, geocoding, cache)
 - `electron/checker.ts` — condition matching logic
 - `electron/store.ts` — reminders storage
 - `assets/tray.png` — tray icon
 - `build/icon.png` — application icon (512×512, for packages)
-- `src/` — React UI
+- `src/` — React UI (sidebar navigation, reminders/forecast tabs, settings)

@@ -21,6 +21,7 @@ import type {
   CheckOutcome,
   CreateReminderInput,
   DayForecast,
+  ForecastBundle,
   Reminder,
   Settings,
 } from "./types";
@@ -209,10 +210,10 @@ function showWindow(): void {
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 720,
-    minWidth: 720,
-    minHeight: 480,
+    width: 1120,
+    height: 760,
+    minWidth: 920,
+    minHeight: 560,
     title: "Weather Reminders",
     backgroundColor: "#0f172a",
     webPreferences: {
@@ -352,6 +353,27 @@ function registerIpc(): void {
         settings.forecastTtlMinutes,
       );
       return days;
+    },
+  );
+
+  ipcMain.handle(
+    "forecast:details",
+    async (
+      _e,
+      args: {
+        latitude: number;
+        longitude: number;
+        days: number;
+        forceRefresh?: boolean;
+      },
+    ): Promise<ForecastBundle> => {
+      return fetchForecast(
+        args.latitude,
+        args.longitude,
+        args.days,
+        settings.forecastTtlMinutes,
+        Boolean(args.forceRefresh),
+      );
     },
   );
 

@@ -1,6 +1,7 @@
 import type {
   CreateReminderInput,
   DayForecast,
+  ForecastBundle,
   GeocodeResult,
   Reminder,
   Settings,
@@ -23,6 +24,12 @@ export interface Api {
     longitude: number,
     days: number,
   ): Promise<DayForecast[]>;
+  forecastDetails(
+    latitude: number,
+    longitude: number,
+    days: number,
+    forceRefresh?: boolean,
+  ): Promise<ForecastBundle>;
   getSettings(): Promise<Settings>;
   setSettings(patch: Partial<Settings>): Promise<Settings>;
   onChanged(callback: (reminders: Reminder[]) => void): () => void;
