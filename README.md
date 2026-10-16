@@ -35,6 +35,16 @@ npm run typecheck
 
 После `npm run build` Electron можно запустить без dev-сервера: `npx electron .`
 
+## Сборка пакетов (electron-builder)
+
+```bash
+npm run dist:linux   # release/*.deb и release/*.AppImage
+npm run dist:win     # release/Weather Reminders-Setup-<version>.exe (NSIS)
+npm run dist         # для текущей платформы
+```
+
+Windows-установщик собирается на Linux через Wine (`apt install wine`). Артефакты кладутся в `release/` (не коммитится).
+
 ## Структура
 
 - `electron/main.ts` — окно, трей, фоновая проверка, уведомления, IPC
@@ -44,5 +54,7 @@ npm run typecheck
 - `electron/checker.ts` — логика срабатывания условий
 - `electron/store.ts` — хранение напоминаний
 - `assets/tray.png` — иконка трея
+- `build/icon.png` — иконка приложения (512×512, для пакетов)
 - `src/` — React-интерфейс
+
 

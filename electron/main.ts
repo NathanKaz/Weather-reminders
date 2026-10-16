@@ -163,10 +163,16 @@ function buildTrayMenu(): Menu {
   ]);
 }
 
+function trayIconPath(): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "assets", "tray.png");
+  }
+  return path.join(__dirname, "../assets/tray.png");
+}
+
 function createTray(): void {
   if (tray) return;
-  const iconPath = path.join(__dirname, "../assets/tray.png");
-  const icon = nativeImage.createFromPath(iconPath);
+  const icon = nativeImage.createFromPath(trayIconPath());
   tray = new Tray(icon);
   tray.setToolTip(t(settings.language, "tray.tooltip"));
   tray.setContextMenu(buildTrayMenu());
