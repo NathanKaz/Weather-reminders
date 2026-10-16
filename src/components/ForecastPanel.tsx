@@ -432,6 +432,9 @@ function DayRow({
         </span>
         <span className="day-temp-max">{fmt(day.tmax)}°</span>
       </div>
+      <div className="day-apparent">
+        {t(lang, "forecast.feelsLike")}: {fmt(day.apparentMin)}° / {fmt(day.apparentMax)}°
+      </div>
       <div className="day-extra">
         {day.precipProbability != null && (
           <span title={t(lang, "forecast.precipProb")}>

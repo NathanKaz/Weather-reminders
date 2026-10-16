@@ -928,6 +928,12 @@ select:focus {
   flex-wrap: wrap;
 }
 
+.day-apparent {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
 /* Skeleton */
 
 .forecast-skeleton {
