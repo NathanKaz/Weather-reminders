@@ -1,5 +1,7 @@
 # Weather Reminders
 
+Русский · [English](README.en.md)
+
 Десктопное приложение (Electron + React), которое напоминает о температуре по прогнозу погоды [Open-Meteo](https://open-meteo.com) — без API-ключей.
 
 ## Возможности
